@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { MdRestaurant, MdMenu, MdNotifications, MdPerson } from "react-icons/md";
+import { MdMenu, MdNotifications, MdPerson } from "react-icons/md";
 import { useAuth } from "../../../hooks/useAuth";
 import { paths } from "../../../routes/paths";
 import "./Header.css";

@@ -6,6 +6,8 @@ export const paths = {
     dashboard: '/dashboard',
     cardapio: '/cardapio',
     pedidos: '/pedidos',
+    cupons: '/cupons',
+    produtos: '/produtos',
     relatorios: '/relatorios',
     editProfile: '/profile/edit',
     notFound: '*',

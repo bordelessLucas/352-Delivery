@@ -7,7 +7,8 @@ import {
   HiTicket, 
   HiTrendingUp, 
   HiCog,
-  HiUsers
+  HiUsers,
+  HiCollection
 } from "react-icons/hi";
 import { MdRestaurant } from "react-icons/md";
 import { paths } from "../../../routes/paths";
@@ -23,8 +24,9 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     { path: paths.home, icon: HiHome, label: "Início" },
     { path: paths.dashboard, icon: HiChartBar, label: "Dashboard" },
     { path: paths.cardapio, icon: HiCube, label: "Cardápio" },
+    { path: paths.produtos, icon: HiCollection, label: "Produtos" },
     { path: paths.pedidos, icon: HiShoppingBag, label: "Pedidos" },
-    { path: "/cupons", icon: HiTicket, label: "Cupons" },
+    { path: paths.cupons, icon: HiTicket, label: "Cupons" },
     { path: paths.relatorios, icon: HiTrendingUp, label: "Relatórios" },
     { path: "/clientes", icon: HiUsers, label: "Clientes" },
     { path: "/configuracoes", icon: HiCog, label: "Configurações" },

@@ -52,14 +52,14 @@ const Home = () => {
             <span className="card-link">Acessar →</span>
           </Link>
 
-          <div className="feature-card">
+          <Link to={paths.cupons} className="feature-card">
             <div className="card-icon">
               <HiTicket size={48} />
             </div>
             <h3>Cupons</h3>
             <p>Crie promoções e descontos</p>
-            <span className="card-link">Em breve</span>
-          </div>
+            <span className="card-link">Acessar →</span>
+          </Link>
 
           <Link to={paths.relatorios} className="feature-card">
             <div className="card-icon">

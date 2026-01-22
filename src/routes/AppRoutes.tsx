@@ -11,6 +11,8 @@ import Home from "../pages/Home/Home";
 import Dashboard from "../pages/Dashboard/Dashboard";
 import Cardapio from "../pages/Cardapio/Cardapio";
 import Pedidos from "../pages/Pedidos/Pedidos";
+import Cupons from "../pages/Cupons/Cupons";
+import Produtos from "../pages/Produtos/Produtos";
 import Relatorios from "../pages/Relatorios/Relatorios";
 
 // Component to handle root redirect
@@ -82,6 +84,22 @@ export const AppRoutes = () => {
                         element={
                             <ProtectedRoute>
                                 <Pedidos />
+                            </ProtectedRoute>
+                        } 
+                    />
+                    <Route 
+                        path={paths.cupons}
+                        element={
+                            <ProtectedRoute>
+                                <Cupons />
+                            </ProtectedRoute>
+                        } 
+                    />
+                    <Route 
+                        path={paths.produtos}
+                        element={
+                            <ProtectedRoute>
+                                <Produtos />
                             </ProtectedRoute>
                         } 
                     />

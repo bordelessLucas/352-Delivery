@@ -1,21 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { HiCalendar, HiPhone, HiUser, HiClock, HiCreditCard, HiCheckCircle } from "react-icons/hi";
 import { Layout } from "../../components/layout";
+import { useAuth } from "../../hooks/useAuth";
+import { getOrders, type Order, type OrderStatus } from "../../services/pedidosService";
 import "./Pedidos.css";
 
 const restaurantBg = "https://static.vecteezy.com/system/resources/previews/001/948/406/non_2x/wood-table-top-for-display-with-blurred-restaurant-background-free-photo.jpg";
-
-export type OrderStatus = "preparando" | "indo-para-entrega" | "confirmando-pagamento" | "concluido";
-
-export interface Order {
-  id: string;
-  numero: string;
-  clienteNome: string;
-  clienteWhatsapp: string;
-  status: OrderStatus;
-  dataHora: Date;
-  formaPagamento: string;
-}
 
 const statusLabels: Record<OrderStatus, string> = {
   preparando: "Preparando",
@@ -24,68 +14,40 @@ const statusLabels: Record<OrderStatus, string> = {
   concluido: "Concluído",
 };
 
-// Pedidos mockados
-const mockOrders: Order[] = [
-  {
-    id: "1",
-    numero: "001",
-    clienteNome: "João Silva",
-    clienteWhatsapp: "(11) 98765-4321",
-    status: "preparando",
-    dataHora: new Date(),
-    formaPagamento: "Cartão de Crédito",
-  },
-  {
-    id: "2",
-    numero: "002",
-    clienteNome: "Maria Santos",
-    clienteWhatsapp: "(11) 97654-3210",
-    status: "indo-para-entrega",
-    dataHora: new Date(),
-    formaPagamento: "PIX",
-  },
-  {
-    id: "3",
-    numero: "003",
-    clienteNome: "Pedro Oliveira",
-    clienteWhatsapp: "(11) 96543-2109",
-    status: "confirmando-pagamento",
-    dataHora: new Date(),
-    formaPagamento: "Dinheiro",
-  },
-  {
-    id: "4",
-    numero: "004",
-    clienteNome: "Ana Costa",
-    clienteWhatsapp: "(11) 95432-1098",
-    status: "preparando",
-    dataHora: new Date(),
-    formaPagamento: "Cartão de Débito",
-  },
-  {
-    id: "5",
-    numero: "005",
-    clienteNome: "Carlos Ferreira",
-    clienteWhatsapp: "(11) 94321-0987",
-    status: "concluido",
-    dataHora: new Date(Date.now() - 86400000), // Ontem
-    formaPagamento: "PIX",
-  },
-  {
-    id: "6",
-    numero: "006",
-    clienteNome: "Julia Almeida",
-    clienteWhatsapp: "(11) 93210-9876",
-    status: "concluido",
-    dataHora: new Date(Date.now() - 172800000), // 2 dias atrás
-    formaPagamento: "Cartão de Crédito",
-  },
-];
-
 const Pedidos = () => {
+  const { currentUser } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [orders] = useState<Order[]>(mockOrders);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    const loadOrders = async () => {
+      if (!currentUser) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        console.log("=== DEBUG PEDIDOS COMPONENTE ===");
+        console.log("UserId atual:", currentUser.uid);
+        const ordersData = await getOrders(currentUser.uid);
+        console.log("Pedidos carregados:", ordersData.length);
+        console.log("Pedidos:", ordersData);
+        setOrders(ordersData);
+      } catch (error: any) {
+        console.error("Erro ao carregar pedidos:", error);
+        console.error("Código do erro:", error?.code);
+        console.error("Mensagem do erro:", error?.message);
+        setOrders([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadOrders();
+  }, [currentUser]);
 
   const formatDate = (date: Date): string => {
     return new Intl.DateTimeFormat("pt-BR", {
@@ -122,7 +84,19 @@ const Pedidos = () => {
   };
 
   const getFilteredOrders = (): Order[] => {
-    return orders.filter((order) => isSameDay(order.dataHora, selectedDate));
+    const filtered = orders.filter((order) => {
+      const sameDay = isSameDay(order.dataHora, selectedDate);
+      if (!sameDay && orders.length > 0) {
+        console.log(`Pedido #${order.numero} não corresponde à data ${formatDate(selectedDate)}. Data do pedido: ${formatDate(order.dataHora)}`);
+      }
+      return sameDay;
+    });
+    console.log(`Filtrando pedidos para ${formatDate(selectedDate)}:`, {
+      totalPedidos: orders.length,
+      pedidosFiltrados: filtered.length,
+      pedidos: orders.map(o => ({ numero: o.numero, data: formatDate(o.dataHora), status: o.status }))
+    });
+    return filtered;
   };
 
   const handleDateChange = (days: number) => {
@@ -174,9 +148,26 @@ const Pedidos = () => {
             </div>
           </div>
 
-          {filteredOrders.length === 0 ? (
+          {loading ? (
             <div className="no-orders">
-              <p>Nenhum pedido encontrado para esta data.</p>
+              <p>Carregando pedidos...</p>
+            </div>
+          ) : orders.length === 0 ? (
+            <div className="no-orders">
+              <p>Nenhum pedido encontrado.</p>
+              <p style={{ fontSize: "14px", marginTop: "10px", color: "#999" }}>
+                Total de pedidos no banco: {orders.length}
+              </p>
+            </div>
+          ) : filteredOrders.length === 0 ? (
+            <div className="no-orders">
+              <p>Nenhum pedido encontrado para esta data ({formatDate(selectedDate)}).</p>
+              <p style={{ fontSize: "14px", marginTop: "10px", color: "#999" }}>
+                Total de pedidos: {orders.length}
+              </p>
+              <p style={{ fontSize: "14px", color: "#999" }}>
+                Datas disponíveis: {[...new Set(orders.map(o => formatDate(o.dataHora)))].join(", ")}
+              </p>
             </div>
           ) : (
             <div className="orders-list">

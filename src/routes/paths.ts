@@ -9,6 +9,10 @@ export const paths = {
     cupons: '/cupons',
     produtos: '/produtos',
     relatorios: '/relatorios',
+    mais: '/mais',
+    clientes: '/clientes',
+    configuracoes: '/configuracoes',
+    delivery: '/delivery',
     editProfile: '/profile/edit',
     notFound: '*',
 } as const;

@@ -173,8 +173,23 @@ export const getProducts = async (userId: string): Promise<Product[]> => {
     
     console.log("Documentos encontrados:", querySnapshot.size);
     
+    // Debug: mostrar dados brutos de cada documento
+    querySnapshot.docs.forEach((doc, index) => {
+      const data = doc.data();
+      console.log(`Documento ${index + 1} (ID: ${doc.id}):`, {
+        nome: data.nome,
+        userId: data.userId,
+        visibilidade: data.visibilidade,
+        status: data.status,
+        categoria: data.categoria,
+        userIdEsperado: userId,
+        userIdMatch: data.userId === userId
+      });
+    });
+    
     if (querySnapshot.empty) {
       console.log("Nenhum produto encontrado para o usuário");
+      console.log("Verifique se os produtos no Firebase têm userId correto:", userId);
       return [];
     }
     

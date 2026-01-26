@@ -3,6 +3,7 @@ import { HiPencil, HiPlus, HiTrash, HiCalendar, HiTag } from "react-icons/hi";
 import { FaPercent, FaDollarSign } from "react-icons/fa";
 import { Layout } from "../../components/layout";
 import { useAuth } from "../../hooks/useAuth";
+import { useConfiguracoes } from "../../hooks/useConfiguracoes";
 import {
   getCoupons,
   createCoupon,
@@ -11,7 +12,7 @@ import {
 } from "../../services/couponService";
 import "./Cupons.css";
 
-const restaurantBg = "https://static.vecteezy.com/system/resources/previews/001/948/406/non_2x/wood-table-top-for-display-with-blurred-restaurant-background-free-photo.jpg";
+const defaultBg = "https://static.vecteezy.com/system/resources/previews/001/948/406/non_2x/wood-table-top-for-display-with-blurred-restaurant-background-free-photo.jpg";
 
 export type DiscountType = "percentual" | "fixo";
 
@@ -34,8 +35,13 @@ const tipoLabels: Record<DiscountType, string> = {
 
 const Cupons = () => {
   const { currentUser } = useAuth();
+  const { config } = useConfiguracoes();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  
+  // Garantir que sempre tenha valores padrão
+  const restaurantBg = (config && config.capa) ? config.capa : defaultBg;
+  const corLayout = (config && config.corLayout) ? config.corLayout : "#8B4513";
   const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [formData, setFormData] = useState<Omit<Coupon, "id" | "usosAtuais">>({
@@ -281,6 +287,7 @@ const Cupons = () => {
         className="cupons-container"
         style={{
           backgroundImage: `linear-gradient(rgba(139, 69, 19, 0.7), rgba(139, 69, 19, 0.7)), url(${restaurantBg})`,
+          backgroundColor: corLayout,
         }}
       >
         <div className="cupons-content">

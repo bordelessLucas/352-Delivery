@@ -118,8 +118,6 @@ export const getOrders = async (userId: string): Promise<Order[]> => {
       return [];
     }
 
-    console.log("=== DEBUG PEDIDOS ===");
-    console.log("Buscando pedidos para userId:", userId);
     const ordersRef = collection(db, "pedidos");
     let querySnapshot;
     
@@ -130,7 +128,6 @@ export const getOrders = async (userId: string): Promise<Order[]> => {
         orderBy("dataHora", "desc")
       );
       querySnapshot = await getDocs(q);
-      console.log("Query com orderBy executada com sucesso");
     } catch (error: any) {
       if (error?.code === "failed-precondition" || error?.code === 9) {
         console.warn("Índice não encontrado, usando query sem orderBy");
@@ -139,50 +136,26 @@ export const getOrders = async (userId: string): Promise<Order[]> => {
           where("userId", "==", userId)
         );
         querySnapshot = await getDocs(q);
-        console.log("Query sem orderBy executada com sucesso");
       } else {
         throw error;
       }
     }
     
-    console.log("Documentos encontrados:", querySnapshot.size);
-    
-    // Debug: mostrar dados brutos de cada documento
-    querySnapshot.docs.forEach((doc, index) => {
-      const data = doc.data();
-      console.log(`Documento ${index + 1} (ID: ${doc.id}):`, {
-        numero: data.numero,
-        userId: data.userId,
-        userIdEsperado: userId,
-        userIdMatch: data.userId === userId,
-        dataHora: data.dataHora
-      });
-    });
-    
     if (querySnapshot.empty) {
-      console.log("Nenhum pedido encontrado para o usuário");
-      console.log("Verifique se os pedidos no Firebase têm userId correto:", userId);
       return [];
     }
     
     const orders = querySnapshot.docs.map((doc) => {
       try {
-        const order = firestoreDocToOrder(doc);
-        console.log("Pedido convertido:", order.id, order.numero, order.dataHora);
-        return order;
+        return firestoreDocToOrder(doc);
       } catch (error) {
         console.error("Erro ao converter documento:", error, doc.id);
-        console.error("Dados do documento:", doc.data());
         return null;
       }
     }).filter((order): order is Order => order !== null);
     
-    console.log("Total de pedidos convertidos:", orders.length);
-    
     // Ordena manualmente se não usou orderBy
-    const sortedOrders = orders.sort((a, b) => b.dataHora.getTime() - a.dataHora.getTime());
-    console.log("Pedidos retornados:", sortedOrders.length);
-    return sortedOrders;
+    return orders.sort((a, b) => b.dataHora.getTime() - a.dataHora.getTime());
   } catch (error: any) {
     console.error("Erro ao buscar pedidos:", error);
     console.error("Código do erro:", error?.code);

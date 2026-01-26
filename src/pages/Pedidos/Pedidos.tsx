@@ -2,10 +2,11 @@ import { useState, useEffect } from "react";
 import { HiCalendar, HiPhone, HiUser, HiClock, HiCreditCard, HiCheckCircle } from "react-icons/hi";
 import { Layout } from "../../components/layout";
 import { useAuth } from "../../hooks/useAuth";
+import { useConfiguracoes } from "../../hooks/useConfiguracoes";
 import { getOrders, type Order, type OrderStatus } from "../../services/pedidosService";
 import "./Pedidos.css";
 
-const restaurantBg = "https://static.vecteezy.com/system/resources/previews/001/948/406/non_2x/wood-table-top-for-display-with-blurred-restaurant-background-free-photo.jpg";
+const defaultBg = "https://static.vecteezy.com/system/resources/previews/001/948/406/non_2x/wood-table-top-for-display-with-blurred-restaurant-background-free-photo.jpg";
 
 const statusLabels: Record<OrderStatus, string> = {
   preparando: "Preparando",
@@ -16,10 +17,14 @@ const statusLabels: Record<OrderStatus, string> = {
 
 const Pedidos = () => {
   const { currentUser } = useAuth();
+  const { config } = useConfiguracoes();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  
+  const restaurantBg = config?.capa || defaultBg;
+  const corLayout = config?.corLayout || "#8B4513";
 
   useEffect(() => {
     const loadOrders = async () => {
@@ -30,11 +35,7 @@ const Pedidos = () => {
 
       try {
         setLoading(true);
-        console.log("=== DEBUG PEDIDOS COMPONENTE ===");
-        console.log("UserId atual:", currentUser.uid);
         const ordersData = await getOrders(currentUser.uid);
-        console.log("Pedidos carregados:", ordersData.length);
-        console.log("Pedidos:", ordersData);
         setOrders(ordersData);
       } catch (error: any) {
         console.error("Erro ao carregar pedidos:", error);
@@ -84,19 +85,9 @@ const Pedidos = () => {
   };
 
   const getFilteredOrders = (): Order[] => {
-    const filtered = orders.filter((order) => {
-      const sameDay = isSameDay(order.dataHora, selectedDate);
-      if (!sameDay && orders.length > 0) {
-        console.log(`Pedido #${order.numero} não corresponde à data ${formatDate(selectedDate)}. Data do pedido: ${formatDate(order.dataHora)}`);
-      }
-      return sameDay;
+    return orders.filter((order) => {
+      return isSameDay(order.dataHora, selectedDate);
     });
-    console.log(`Filtrando pedidos para ${formatDate(selectedDate)}:`, {
-      totalPedidos: orders.length,
-      pedidosFiltrados: filtered.length,
-      pedidos: orders.map(o => ({ numero: o.numero, data: formatDate(o.dataHora), status: o.status }))
-    });
-    return filtered;
   };
 
   const handleDateChange = (days: number) => {
@@ -121,6 +112,7 @@ const Pedidos = () => {
         className="pedidos-container"
         style={{
           backgroundImage: `linear-gradient(rgba(139, 69, 19, 0.7), rgba(139, 69, 19, 0.7)), url(${restaurantBg})`,
+          backgroundColor: corLayout,
         }}
       >
         <div className="pedidos-content">

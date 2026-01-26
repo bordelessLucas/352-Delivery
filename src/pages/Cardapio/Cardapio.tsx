@@ -2,10 +2,11 @@ import { useState, useEffect } from "react";
 import { HiPencil, HiPlus } from "react-icons/hi";
 import { Layout } from "../../components/layout";
 import { useAuth } from "../../hooks/useAuth";
+import { useConfiguracoes } from "../../hooks/useConfiguracoes";
 import { getProducts, createProduct, updateProduct } from "../../services/productService";
 import "./Cardapio.css";
 
-const restaurantBg = "https://static.vecteezy.com/system/resources/previews/001/948/406/non_2x/wood-table-top-for-display-with-blurred-restaurant-background-free-photo.jpg";
+const defaultBg = "https://static.vecteezy.com/system/resources/previews/001/948/406/non_2x/wood-table-top-for-display-with-blurred-restaurant-background-free-photo.jpg";
 
 export type ProductCategory = "entradas" | "pratos-principais" | "sobremesas" | "bebidas" | "drinks";
 
@@ -28,8 +29,12 @@ const categoryLabels: Record<ProductCategory, string> = {
 
 const Cardapio = () => {
   const { currentUser } = useAuth();
+  const { config } = useConfiguracoes();
   const [products, setProducts] = useState<CardapioProduct[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  
+  const restaurantBg = config?.capa || defaultBg;
+  const corLayout = config?.corLayout || "#8B4513";
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -40,35 +45,12 @@ const Cardapio = () => {
 
       try {
         setLoading(true);
-        console.log("=== DEBUG CARDAPIO ===");
-        console.log("UserId atual:", currentUser.uid);
         const productsData = await getProducts(currentUser.uid);
-        console.log("Produtos carregados do Firebase:", productsData.length);
-        console.log("Todos os produtos:", productsData);
-        
-        // Verificar cada produto individualmente
-        productsData.forEach((p, index) => {
-          console.log(`Produto ${index + 1}:`, {
-            id: p.id,
-            nome: p.nome,
-            categoria: p.categoria,
-            visibilidade: p.visibilidade,
-            status: p.status,
-            preco: p.preco,
-            fotoUrl: p.fotoUrl,
-            userId: p.userId
-          });
-        });
         
         // Converter produtos do formato do serviço para o formato do Cardapio
         const produtosFiltrados = productsData.filter(p => {
-          const visivel = p.visibilidade === true;
-          const ativo = p.status === "ativo";
-          console.log(`Produto "${p.nome}": visibilidade=${visivel}, status=${ativo}, passa filtro=${visivel && ativo}`);
-          return visivel && ativo;
+          return p.visibilidade === true && p.status === "ativo";
         });
-        
-        console.log("Produtos após filtro de visibilidade/status:", produtosFiltrados.length);
         
         const cardapioProducts = produtosFiltrados.map(p => {
           // Normalizar categoria: remover espaços extras e converter para minúsculas para comparação
@@ -84,11 +66,7 @@ const Cardapio = () => {
           
           if (categoriaMatch) {
             categoriaFinal = categoriaMatch;
-          } else {
-            console.warn(`Categoria "${p.categoria}" não encontrada para produto "${p.nome}". Usando padrão "entradas"`);
           }
-          
-          console.log(`Convertendo produto "${p.nome}": categoria original="${p.categoria}", categoria final="${categoriaFinal}"`);
           
           return {
             id: p.id,
@@ -100,12 +78,6 @@ const Cardapio = () => {
           };
         });
         
-        console.log("Produtos convertidos para cardápio:", cardapioProducts.length);
-        console.log("Produtos por categoria:", cardapioProducts.reduce((acc, p) => {
-          acc[p.category] = (acc[p.category] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>));
-        console.log("Lista completa de produtos convertidos:", cardapioProducts);
         setProducts(cardapioProducts);
       } catch (error: any) {
         console.error("Erro ao carregar produtos:", error);
@@ -257,15 +229,7 @@ const Cardapio = () => {
   };
 
   const getProductsByCategory = (category: ProductCategory) => {
-    const filtered = products.filter((p) => {
-      const matches = p.category === category;
-      if (matches) {
-        console.log(`Produto "${p.name}" corresponde à categoria "${category}"`);
-      }
-      return matches;
-    });
-    console.log(`Categoria "${category}": ${filtered.length} produtos encontrados`, filtered.map(p => p.name));
-    return filtered;
+    return products.filter((p) => p.category === category);
   };
 
   const formatPrice = (price: number) => {
@@ -319,6 +283,7 @@ const Cardapio = () => {
         className="cardapio-container"
         style={{
           backgroundImage: `linear-gradient(rgba(139, 69, 19, 0.7), rgba(139, 69, 19, 0.7)), url(${restaurantBg})`,
+          backgroundColor: corLayout,
         }}
       >
         <div className="cardapio-content">
@@ -342,7 +307,6 @@ const Cardapio = () => {
             <>
               {categories.map((category) => {
                 const categoryProducts = getProductsByCategory(category);
-                console.log(`Renderizando categoria "${category}": ${categoryProducts.length} produtos`);
                 if (categoryProducts.length === 0) return null;
 
                 return (
@@ -350,7 +314,6 @@ const Cardapio = () => {
                     <h2 className="category-title">{categoryLabels[category]}</h2>
                     <div className="products-grid">
                       {categoryProducts.map((product) => {
-                        console.log(`Renderizando produto: ${product.name} na categoria ${category}`);
                         return (
                           <div key={product.id} className="product-card">
                             <button
@@ -375,22 +338,6 @@ const Cardapio = () => {
                   </div>
                 );
               })}
-              {/* Debug: mostrar todos os produtos se não estiverem em nenhuma categoria */}
-              {products.length > 0 && products.filter(p => !categories.includes(p.category)).length > 0 && (
-                <div className="category-section" style={{ border: "2px solid red", padding: "20px" }}>
-                  <h2 className="category-title">DEBUG - Produtos sem categoria válida</h2>
-                  <div className="products-grid">
-                    {products.filter(p => !categories.includes(p.category)).map((product) => (
-                      <div key={product.id} className="product-card">
-                        <div className="product-info">
-                          <h3 className="product-name">{product.name}</h3>
-                          <p>Categoria: {product.category}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </>
           )}
         </div>

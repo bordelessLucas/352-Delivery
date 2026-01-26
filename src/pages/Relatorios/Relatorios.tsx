@@ -1,9 +1,12 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { HiTrendingUp, HiDocumentText, HiPrinter, HiCalendar } from "react-icons/hi";
 import { Layout } from "../../components/layout";
+import { useAuth } from "../../hooks/useAuth";
+import { useConfiguracoes } from "../../hooks/useConfiguracoes";
+import { getReportStats, generateReport } from "../../services/relatoriosService";
 import "./Relatorios.css";
 
-const restaurantBg = "https://static.vecteezy.com/system/resources/previews/001/948/406/non_2x/wood-table-top-for-display-with-blurred-restaurant-background-free-photo.jpg";
+const defaultBg = "https://static.vecteezy.com/system/resources/previews/001/948/406/non_2x/wood-table-top-for-display-with-blurred-restaurant-background-free-photo.jpg";
 
 interface ReportData {
   pedidosConcluidos: number;
@@ -17,18 +20,51 @@ interface ReportData {
 }
 
 const Relatorios = () => {
+  const { currentUser } = useAuth();
+  const { config } = useConfiguracoes();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  const restaurantBg = config?.capa || defaultBg;
+  const corLayout = config?.corLayout || "#8B4513";
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [showReport, setShowReport] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<{
+    faturamentoDia: number;
+    faturamentoSemana: number;
+    faturamentoMes: number;
+    pedidosMes: number;
+  }>({
+    faturamentoDia: 0,
+    faturamentoSemana: 0,
+    faturamentoMes: 0,
+    pedidosMes: 0,
+  });
   const reportRef = useRef<HTMLDivElement>(null);
 
-  // Dados mockados para os cards
-  const faturamentoDia = 1250.50;
-  const faturamentoSemana = 8750.30;
-  const faturamentoMes = 35200.75;
-  const pedidosMes = 142;
+  // Carregar estatísticas do dashboard
+  useEffect(() => {
+    const loadStats = async () => {
+      if (!currentUser) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const statsData = await getReportStats(currentUser.uid);
+        setStats(statsData);
+      } catch (error) {
+        console.error("Erro ao carregar estatísticas:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStats();
+  }, [currentUser]);
 
   const formatCurrency = (value: number): string => {
     return new Intl.NumberFormat("pt-BR", {
@@ -47,7 +83,12 @@ const Relatorios = () => {
     }).format(date);
   };
 
-  const handleGenerateReport = () => {
+  const handleGenerateReport = async () => {
+    if (!currentUser) {
+      alert("Você precisa estar autenticado para gerar relatórios.");
+      return;
+    }
+
     if (!startDate || !endDate) {
       alert("Por favor, selecione as datas inicial e final.");
       return;
@@ -58,21 +99,23 @@ const Relatorios = () => {
       return;
     }
 
-    // Dados mockados do relatório
-    const mockData: ReportData = {
-      pedidosConcluidos: 45,
-      pedidosCancelados: 3,
-      totalPedidos: 48,
-      pix: 1250.00,
-      credito: 850.50,
-      debito: 320.75,
-      dinheiro: 180.25,
-      totalGanho: 2601.50,
-    };
+    try {
+      setLoading(true);
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
 
-    setReportData(mockData);
-    setShowReport(true);
-    setIsModalOpen(false);
+      const reportDataGenerated = await generateReport(currentUser.uid, start, end);
+      setReportData(reportDataGenerated);
+      setShowReport(true);
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Erro ao gerar relatório:", error);
+      alert("Erro ao gerar relatório. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handlePrint = () => {
@@ -210,6 +253,7 @@ const Relatorios = () => {
         className="relatorios-container"
         style={{
           backgroundImage: `linear-gradient(rgba(139, 69, 19, 0.7), rgba(139, 69, 19, 0.7)), url(${restaurantBg})`,
+          backgroundColor: corLayout,
         }}
       >
         <div className="relatorios-content">
@@ -221,47 +265,53 @@ const Relatorios = () => {
             </button>
           </div>
 
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-icon">
-                <HiTrendingUp size={32} />
-              </div>
-              <div className="stat-info">
-                <h3>Faturamento do Dia</h3>
-                <p className="stat-value">{formatCurrency(faturamentoDia)}</p>
-              </div>
+          {loading ? (
+            <div style={{ padding: "2rem", textAlign: "center" }}>
+              <p>Carregando estatísticas...</p>
             </div>
+          ) : (
+            <div className="stats-grid">
+              <div className="stat-card">
+                <div className="stat-icon">
+                  <HiTrendingUp size={32} />
+                </div>
+                <div className="stat-info">
+                  <h3>Faturamento do Dia</h3>
+                  <p className="stat-value">{formatCurrency(stats.faturamentoDia)}</p>
+                </div>
+              </div>
 
-            <div className="stat-card">
-              <div className="stat-icon">
-                <HiTrendingUp size={32} />
+              <div className="stat-card">
+                <div className="stat-icon">
+                  <HiTrendingUp size={32} />
+                </div>
+                <div className="stat-info">
+                  <h3>Faturamento da Semana</h3>
+                  <p className="stat-value">{formatCurrency(stats.faturamentoSemana)}</p>
+                </div>
               </div>
-              <div className="stat-info">
-                <h3>Faturamento da Semana</h3>
-                <p className="stat-value">{formatCurrency(faturamentoSemana)}</p>
-              </div>
-            </div>
 
-            <div className="stat-card">
-              <div className="stat-icon">
-                <HiTrendingUp size={32} />
+              <div className="stat-card">
+                <div className="stat-icon">
+                  <HiTrendingUp size={32} />
+                </div>
+                <div className="stat-info">
+                  <h3>Faturamento do Mês</h3>
+                  <p className="stat-value">{formatCurrency(stats.faturamentoMes)}</p>
+                </div>
               </div>
-              <div className="stat-info">
-                <h3>Faturamento do Mês</h3>
-                <p className="stat-value">{formatCurrency(faturamentoMes)}</p>
-              </div>
-            </div>
 
-            <div className="stat-card">
-              <div className="stat-icon">
-                <HiDocumentText size={32} />
-              </div>
-              <div className="stat-info">
-                <h3>Pedidos do Mês</h3>
-                <p className="stat-value">{pedidosMes}</p>
+              <div className="stat-card">
+                <div className="stat-icon">
+                  <HiDocumentText size={32} />
+                </div>
+                <div className="stat-info">
+                  <h3>Pedidos do Mês</h3>
+                  <p className="stat-value">{stats.pedidosMes}</p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Modal de Criar Relatório */}
@@ -309,8 +359,8 @@ const Relatorios = () => {
                   >
                     Cancelar
                   </button>
-                  <button type="submit" className="generate-btn">
-                    Gerar Relatório
+                  <button type="submit" className="generate-btn" disabled={loading}>
+                    {loading ? "Gerando..." : "Gerar Relatório"}
                   </button>
                 </div>
               </form>

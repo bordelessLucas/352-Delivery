@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { HiPencil, HiPlus, HiTrash, HiEye, HiEyeOff, HiDuplicate, HiX } from "react-icons/hi";
 import { Layout } from "../../components/layout";
 import { useAuth } from "../../hooks/useAuth";
+import { useConfiguracoes } from "../../hooks/useConfiguracoes";
 import {
   getProducts,
   createProduct,
@@ -18,13 +19,18 @@ import {
 } from "../../services/productService";
 import "./Produtos.css";
 
-const restaurantBg = "https://static.vecteezy.com/system/resources/previews/001/948/406/non_2x/wood-table-top-for-display-with-blurred-restaurant-background-free-photo.jpg";
+const defaultBg = "https://static.vecteezy.com/system/resources/previews/001/948/406/non_2x/wood-table-top-for-display-with-blurred-restaurant-background-free-photo.jpg";
 
 const Produtos = () => {
   const { currentUser } = useAuth();
+  const { config } = useConfiguracoes();
   const [products, setProducts] = useState<Product[]>([]);
   const [globalVariations, setGlobalVariations] = useState<GlobalVariation[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  
+  // Garantir que sempre tenha valores padrão
+  const restaurantBg = (config && config.capa) ? config.capa : defaultBg;
+  const corLayout = (config && config.corLayout) ? config.corLayout : "#8B4513";
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isGlobalVariationModalOpen, setIsGlobalVariationModalOpen] = useState(false);
@@ -430,6 +436,7 @@ const Produtos = () => {
         className="produtos-container"
         style={{
           backgroundImage: `linear-gradient(rgba(139, 69, 19, 0.7), rgba(139, 69, 19, 0.7)), url(${restaurantBg})`,
+          backgroundColor: corLayout,
         }}
       >
         <div className="produtos-content">

@@ -143,7 +143,6 @@ export const getProducts = async (userId: string): Promise<Product[]> => {
       return [];
     }
 
-    console.log("Buscando produtos para userId:", userId);
     const productsRef = collection(db, "produtos");
     let querySnapshot;
     
@@ -155,7 +154,6 @@ export const getProducts = async (userId: string): Promise<Product[]> => {
         orderBy("createdAt", "desc")
       );
       querySnapshot = await getDocs(q);
-      console.log("Query com orderBy executada com sucesso");
     } catch (error: any) {
       // Se falhar (por falta de índice), usa apenas where
       if (error?.code === "failed-precondition" || error?.code === 9) {
@@ -165,55 +163,28 @@ export const getProducts = async (userId: string): Promise<Product[]> => {
           where("userId", "==", userId)
         );
         querySnapshot = await getDocs(q);
-        console.log("Query sem orderBy executada com sucesso");
       } else {
         throw error;
       }
     }
     
-    console.log("Documentos encontrados:", querySnapshot.size);
-    
-    // Debug: mostrar dados brutos de cada documento
-    querySnapshot.docs.forEach((doc, index) => {
-      const data = doc.data();
-      console.log(`Documento ${index + 1} (ID: ${doc.id}):`, {
-        nome: data.nome,
-        userId: data.userId,
-        visibilidade: data.visibilidade,
-        status: data.status,
-        categoria: data.categoria,
-        userIdEsperado: userId,
-        userIdMatch: data.userId === userId
-      });
-    });
-    
     if (querySnapshot.empty) {
-      console.log("Nenhum produto encontrado para o usuário");
-      console.log("Verifique se os produtos no Firebase têm userId correto:", userId);
       return [];
     }
     
     const products = querySnapshot.docs.map((doc) => {
       try {
-        const product = firestoreDocToProduct(doc);
-        console.log("Produto convertido:", product.id, product.nome);
-        return product;
+        return firestoreDocToProduct(doc);
       } catch (error) {
         console.error("Erro ao converter documento:", error, doc.id);
-        console.error("Dados do documento:", doc.data());
         return null;
       }
     }).filter((product): product is Product => product !== null);
     
-    console.log("Total de produtos convertidos:", products.length);
-    
     // Ordena manualmente se não usou orderBy
-    const sortedProducts = products.sort((a, b) => {
+    return products.sort((a, b) => {
       return b.createdAt.getTime() - a.createdAt.getTime();
     });
-    
-    console.log("Produtos retornados:", sortedProducts.length);
-    return sortedProducts;
   } catch (error: any) {
     console.error("Erro ao buscar produtos:", error);
     console.error("Código do erro:", error?.code);

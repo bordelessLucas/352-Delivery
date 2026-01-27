@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { HiCog, HiPhotograph, HiCreditCard, HiTruck, HiPhone, HiUser, HiTrash, HiPencil, HiPlus } from "react-icons/hi";
+import { HiCog, HiPhotograph, HiCreditCard, HiTruck, HiPhone, HiUser, HiTrash, HiPencil, HiPlus, HiViewGrid } from "react-icons/hi";
 import { Layout } from "../../components/layout";
 import { useAuth } from "../../hooks/useAuth";
 import {
@@ -12,6 +12,13 @@ import {
   updateConfigUsuario,
   type BairroEntrega,
 } from "../../services/configuracoesService";
+import {
+  getBanners,
+  createBanner,
+  updateBanner,
+  deleteBanner,
+  type Banner,
+} from "../../services/bannerService";
 import "./Configuracoes.css";
 
 const Configuracoes = () => {
@@ -85,9 +92,26 @@ const Configuracoes = () => {
     preco: "",
   });
 
+  // Estados de Banners
+  const [banners, setBanners] = useState<Banner[]>([]);
+  const [editingBanner, setEditingBanner] = useState<Banner | null>(null);
+  const [showBannerModal, setShowBannerModal] = useState(false);
+  const [bannerForm, setBannerForm] = useState({
+    titulo: "",
+    imagemDesktop: "",
+    imagemMobile: "",
+    visivel: true,
+  });
+  const [desktopFile, setDesktopFile] = useState<File | null>(null);
+  const [mobileFile, setMobileFile] = useState<File | null>(null);
+  const [desktopPreview, setDesktopPreview] = useState<string>("");
+  const [mobilePreview, setMobilePreview] = useState<string>("");
+  const [uploading, setUploading] = useState(false);
+
   const sections = [
     { id: "geral", label: "Geral", icon: HiCog },
     { id: "aparencia", label: "Aparência", icon: HiPhotograph },
+    { id: "banners", label: "Banners", icon: HiViewGrid },
     { id: "pagamento", label: "Pagamento", icon: HiCreditCard },
     { id: "entrega", label: "Entrega", icon: HiTruck },
     { id: "contato", label: "Contato", icon: HiPhone },
@@ -112,6 +136,10 @@ const Configuracoes = () => {
         setContato(config.contato);
         setUsuario(config.usuario);
         setBairros(config.entrega.bairros);
+        
+        // Carregar banners
+        const bannersData = await getBanners(currentUser.uid);
+        setBanners(bannersData);
       } catch (error) {
         console.error("Erro ao carregar configurações:", error);
       } finally {
@@ -233,7 +261,7 @@ const Configuracoes = () => {
     setShowBairroModal(true);
   };
 
-  const handleEditBairro = (bairro: Bairro) => {
+  const handleEditBairro = (bairro: BairroEntrega) => {
     setEditingBairro(bairro);
     setBairroForm({
       nome: bairro.nome,
@@ -280,6 +308,132 @@ const Configuracoes = () => {
     setShowBairroModal(false);
     setBairroForm({ nome: "", distancia: "", preco: "" });
     setEditingBairro(null);
+  };
+
+  // Handlers de Banner
+  const handleAddBanner = () => {
+    setEditingBanner(null);
+    setBannerForm({ titulo: "", imagemDesktop: "", imagemMobile: "", visivel: true });
+    setDesktopFile(null);
+    setMobileFile(null);
+    setDesktopPreview("");
+    setMobilePreview("");
+    setShowBannerModal(true);
+  };
+
+  const handleEditBanner = (banner: Banner) => {
+    setEditingBanner(banner);
+    setBannerForm({
+      titulo: banner.titulo,
+      imagemDesktop: banner.imagemDesktop,
+      imagemMobile: banner.imagemMobile,
+      visivel: banner.visivel,
+    });
+    setDesktopPreview(banner.imagemDesktop);
+    setMobilePreview(banner.imagemMobile);
+    setDesktopFile(null);
+    setMobileFile(null);
+    setShowBannerModal(true);
+  };
+
+  const handleDeleteBanner = async (id: string) => {
+    if (!window.confirm("Tem certeza que deseja excluir este banner?")) {
+      return;
+    }
+
+    try {
+      await deleteBanner(id);
+      setBanners(banners.filter((b) => b.id !== id));
+      alert("Banner excluído com sucesso!");
+    } catch (error) {
+      console.error("Erro ao excluir banner:", error);
+      alert("Erro ao excluir banner. Tente novamente.");
+    }
+  };
+
+  const handleDesktopFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setDesktopFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setDesktopPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleMobileFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setMobileFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setMobilePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSaveBanner = async () => {
+    if (!currentUser) return;
+
+    if (!bannerForm.titulo) {
+      alert("Preencha o título do banner!");
+      return;
+    }
+
+    if (!editingBanner && (!desktopFile || !mobileFile)) {
+      alert("Selecione as imagens para desktop e mobile!");
+      return;
+    }
+
+    try {
+      setUploading(true);
+
+      if (editingBanner) {
+        await updateBanner(
+          editingBanner.id!,
+          {
+            titulo: bannerForm.titulo,
+            visivel: bannerForm.visivel,
+          },
+          desktopFile || undefined,
+          mobileFile || undefined
+        );
+        alert("Banner atualizado com sucesso!");
+      } else {
+        await createBanner(
+          {
+            titulo: bannerForm.titulo,
+            imagemDesktop: "",
+            imagemMobile: "",
+            visivel: bannerForm.visivel,
+          },
+          currentUser.uid,
+          desktopFile!,
+          mobileFile!
+        );
+        alert("Banner criado com sucesso!");
+      }
+
+      // Recarregar banners
+      const bannersData = await getBanners(currentUser.uid);
+      setBanners(bannersData);
+
+      setShowBannerModal(false);
+      setBannerForm({ titulo: "", imagemDesktop: "", imagemMobile: "", visivel: true });
+      setDesktopFile(null);
+      setMobileFile(null);
+      setDesktopPreview("");
+      setMobilePreview("");
+      setEditingBanner(null);
+    } catch (error) {
+      console.error("Erro ao salvar banner:", error);
+      alert("Erro ao salvar banner. Tente novamente.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const renderSection = () => {
@@ -455,6 +609,139 @@ const Configuracoes = () => {
                 {saving ? "Salvando..." : "Salvar"}
               </button>
             </div>
+          </div>
+        );
+
+      case "banners":
+        return (
+          <div className="config-section">
+            <h2>Banners</h2>
+            
+            <div className="banners-section">
+              <div className="banners-header">
+                <h3>Gerenciar Banners</h3>
+                <button className="add-btn" onClick={handleAddBanner}>
+                  <HiPlus size={20} />
+                  Adicionar Banner
+                </button>
+              </div>
+
+              {banners.length === 0 ? (
+                <div className="empty-state">
+                  <p>Nenhum banner cadastrado. Clique em "Adicionar Banner" para começar.</p>
+                </div>
+              ) : (
+                <div className="banners-list">
+                  {banners.map((banner) => (
+                    <div key={banner.id} className="banner-item">
+                      <div className="banner-info">
+                        <div className="banner-header-info">
+                          <h4>{banner.titulo}</h4>
+                          <span className={`status-badge ${banner.visivel ? "visivel" : "oculto"}`}>
+                            {banner.visivel ? "Visível" : "Oculto"}
+                          </span>
+                        </div>
+                        <div className="banner-images-preview">
+                          {banner.imagemDesktop && (
+                            <div className="image-preview-item">
+                              <p>Desktop:</p>
+                              <img src={banner.imagemDesktop} alt="Desktop" className="banner-preview-img" />
+                            </div>
+                          )}
+                          {banner.imagemMobile && (
+                            <div className="image-preview-item">
+                              <p>Mobile:</p>
+                              <img src={banner.imagemMobile} alt="Mobile" className="banner-preview-img" />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="banner-actions">
+                        <button
+                          className="edit-btn"
+                          onClick={() => handleEditBanner(banner)}
+                        >
+                          <HiPencil size={18} />
+                          Editar
+                        </button>
+                        <button
+                          className="delete-btn"
+                          onClick={() => handleDeleteBanner(banner.id!)}
+                        >
+                          <HiTrash size={18} />
+                          Excluir
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {showBannerModal && (
+              <div className="modal-overlay" onClick={() => setShowBannerModal(false)}>
+                <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                  <h3>{editingBanner ? "Editar Banner" : "Adicionar Banner"}</h3>
+                  <div className="form-group">
+                    <label>Título</label>
+                    <input
+                      type="text"
+                      value={bannerForm.titulo}
+                      onChange={(e) => setBannerForm({ ...bannerForm, titulo: e.target.value })}
+                      placeholder="Digite o título do banner"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Imagem para Computador</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleDesktopFileChange}
+                    />
+                    {(desktopPreview || bannerForm.imagemDesktop) && (
+                      <img
+                        src={desktopPreview || bannerForm.imagemDesktop}
+                        alt="Preview Desktop"
+                        className="image-preview"
+                      />
+                    )}
+                  </div>
+                  <div className="form-group">
+                    <label>Imagem para Celulares</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleMobileFileChange}
+                    />
+                    {(mobilePreview || bannerForm.imagemMobile) && (
+                      <img
+                        src={mobilePreview || bannerForm.imagemMobile}
+                        alt="Preview Mobile"
+                        className="image-preview"
+                      />
+                    )}
+                  </div>
+                  <div className="form-group checkbox-group">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={bannerForm.visivel}
+                        onChange={(e) => setBannerForm({ ...bannerForm, visivel: e.target.checked })}
+                      />
+                      <span>Visível</span>
+                    </label>
+                  </div>
+                  <div className="modal-actions">
+                    <button className="cancel-btn" onClick={() => setShowBannerModal(false)}>
+                      Cancelar
+                    </button>
+                    <button className="save-btn" onClick={handleSaveBanner} disabled={uploading}>
+                      {uploading ? "Salvando..." : "Salvar"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         );
 

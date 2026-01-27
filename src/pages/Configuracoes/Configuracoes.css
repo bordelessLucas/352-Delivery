@@ -378,6 +378,116 @@
   background: #e5e7eb;
 }
 
+/* Seção de Banners */
+.banners-section {
+  margin-top: 0;
+  padding: 24px;
+  background: #f9fafb;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.banners-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.banners-header h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.banners-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.banner-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 20px;
+  background: white;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  gap: 20px;
+}
+
+.banner-info {
+  flex: 1;
+}
+
+.banner-header-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.banner-header-info h4 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-badge.visivel {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge.oculto {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.banner-images-preview {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.image-preview-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.image-preview-item p {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.banner-preview-img {
+  width: 150px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.banner-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 /* Responsive */
 @media (max-width: 968px) {
   .configuracoes-container {
@@ -416,6 +526,25 @@
   .bairro-actions {
     width: 100%;
     justify-content: flex-end;
+  }
+
+  .banner-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .banner-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .banner-images-preview {
+    flex-direction: column;
+  }
+
+  .banner-preview-img {
+    width: 100%;
+    max-width: 300px;
   }
 }
 
